@@ -57,7 +57,7 @@ def matcher(tmp_path_factory):
 
 
 def run_accuracy_test(matcher, rates, max_licenses=None):
-    results = {rate: {"total": 0, "correct": 0, "close": 0} for rate in rates}
+    results = {rate: {"total": 0, "top1": 0, "top3": 0, "top5": 0} for rate in rates}
 
     fixtures = list(FIXTURES_DIR.glob("*.json"))
     if not fixtures:
@@ -73,7 +73,6 @@ def run_accuracy_test(matcher, rates, max_licenses=None):
             data = json.load(f)
 
         true_id = data["license_id"]
-        close_ids = set(data.get("close_license_ids", []))
 
         for rate in rates:
             if rate == "00":
@@ -85,14 +84,21 @@ def run_accuracy_test(matcher, rates, max_licenses=None):
                 text = data[key]
 
             match_res = matcher.match(text)
+            matched_ids = [r["license_id"] for r in match_res]
 
             results[rate]["total"] += 1
-            if match_res:
-                top_match = match_res[0]["license_id"]
-                if top_match == true_id:
-                    results[rate]["correct"] += 1
-                elif top_match in close_ids:
-                    results[rate]["close"] += 1
+
+            # Top 1
+            if matched_ids and matched_ids[0] == true_id:
+                results[rate]["top1"] += 1
+
+            # Top 3
+            if true_id in matched_ids[:3]:
+                results[rate]["top3"] += 1
+
+            # Top 5
+            if true_id in matched_ids[:5]:
+                results[rate]["top5"] += 1
 
     return results
 
@@ -105,11 +111,16 @@ def test_subset_accuracy(matcher):
     for rate in rates:
         stats = results[rate]
         if stats["total"] > 0:
-            accuracy = (stats["correct"] / stats["total"]) * 100
-            print(f"Subset Accuracy ({rate}%): {accuracy:.2f}%")
-            # Can't be 100% because it depends on random sampling,
+            top1_acc = (stats["top1"] / stats["total"]) * 100
+            top5_acc = (stats["top5"] / stats["total"]) * 100
+            print(f"Subset Top 1 Accuracy ({rate}%): {top1_acc:.2f}%")
+            print(f"Subset Top 5 Accuracy ({rate}%): {top5_acc:.2f}%")
+
+            # Can't be 100% for Top 1 because it depends on random sampling,
             # but with 1% distortion, it reasonable to aim high.
-            assert accuracy >= 90
+            assert top1_acc >= 90
+            # Top 5 MUST be 100% for low noise
+            assert top5_acc == 100
 
 
 @pytest.mark.benchmark
@@ -118,16 +129,19 @@ def test_full_accuracy(matcher):
     rates = ["00", "01", "02", "05", "10", "20"]
     results = run_accuracy_test(matcher, rates)
 
-    print("\n" + "=" * 50)
-    print(f"{'Distortion Rate':<20} | {'Accuracy':<10} | {'Close Match':<15}")
-    print("=" * 50)
+    print("\n" + "=" * 65)
+    print(f"{'Distortion Rate':<20} | {'Top 1':<10} | {'Top 3':<10} | {'Top 5':<10}")
+    print("=" * 65)
 
     for rate in rates:
         stats = results[rate]
         if stats["total"] == 0:
             continue
-        accuracy = (stats["correct"] / stats["total"]) * 100
-        close_rate = (stats["close"] / stats["total"]) * 100
+
+        acc1 = (stats["top1"] / stats["total"]) * 100
+        acc3 = (stats["top3"] / stats["total"]) * 100
+        acc5 = (stats["top5"] / stats["total"]) * 100
+
         label = "Verbatim" if rate == "00" else f"{rate}%"
-        print(f"{label:<20} | {accuracy:6.2f}%    | {close_rate:6.2f}%")
-    print("=" * 50 + "\n")
+        print(f"{label:<20} | {acc1:6.2f}%   | {acc3:6.2f}%   | {acc5:6.2f}%")
+    print("=" * 65 + "\n")
