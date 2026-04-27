@@ -1,18 +1,16 @@
 # LicenseID
 
-A modern, portable SPDX License ID matcher.
+A portable SPDX License ID matcher.
 
 `licenseid` takes license text as input and identifies the closest matched SPDX License ID using a hybrid search strategy (SQLite FTS5 trigram + RapidFuzz ranking + optional Java validation).
 
 ## Features
 
-- **Embedded Search**: Uses SQLite FTS5 with trigram tokenization for fast recall.
-- **Hybrid Strategy**:
-  - **Tier 1**: Broad recall using SQLite.
-  - **Tier 2**: Precision ranking using RapidFuzz (Token Set Ratio).
+- **Hybrid strategy**:
+  - **Tier 1**: Broad recall using SQLite FTS5 with trigram tokenization.
+  - **Tier 2**: Precision ranking using RapidFuzz (token set ratio).
   - **Tier 3**: Optional final validation via `tools-java` if available.
-- **Modern Python**: Built for Python 3.10+ using Hatchling.
-- **Unix Philosophy**: CLI output is parseable and predictable by default.
+- **Unix philosophy**: Parseable CLI output.
 
 ## Installation
 
@@ -30,7 +28,7 @@ uv tool install licenseid
 
 ## Usage
 
-### 1. Update the License Database
+### 1. Update the license database
 
 Before matching, you need to build the local license index:
 
@@ -38,7 +36,7 @@ Before matching, you need to build the local license index:
 licenseid update
 ```
 
-### 2. Match a License
+### 2. Match a license
 
 Match text from a file:
 
@@ -52,7 +50,7 @@ Or from a string:
 licenseid match --text "This is a sample license text..."
 ```
 
-### 3. Output Formats
+### 3. Output formats
 
 Default (Unix-friendly):
 
