@@ -67,7 +67,10 @@ def update(db: Optional[str], version: str) -> None:
 @click.option(
     "--json", "json_output", is_flag=True, help="Output results in JSON format."
 )
-@click.option("--threshold", type=float, default=0.0, help="Minimum score threshold.")
+@click.option("--threshold", type=float, default=0.85, help="Minimum score threshold.")
+@click.option(
+    "--top", type=int, default=3, help="Maximum number of results to return."
+)
 @click.option(
     "--consult-tools-java",
     "consult_tools_java",
@@ -80,6 +83,7 @@ def match(
     db: Optional[str],
     json_output: bool,
     threshold: float,
+    top: int,
     consult_tools_java: bool,
 ) -> None:
     """Identify license text and return the closest matched SPDX License ID."""
@@ -115,8 +119,8 @@ def match(
     matcher = AggregatedLicenseMatcher(db_path, enable_java=consult_tools_java)
     results = matcher.match(license_text)
 
-    # Filter by threshold
-    results = [r for r in results if r["score"] >= threshold]
+    # Filter by threshold and limit to top N
+    results = [r for r in results if r["score"] >= threshold][:top]
 
     if json_output:
         click.echo(json.dumps(results, indent=2))

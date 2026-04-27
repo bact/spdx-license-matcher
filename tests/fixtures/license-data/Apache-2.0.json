@@ -4,7 +4,8 @@
     "name": "Apache License 2.0",
     "close_license_ids": [
         "Apache-1.0",
-        "Apache-1.1"
+        "Apache-1.1",
+        "Pixar"
     ],
     "is_high_usage": true,
     "is_osi_approved": true,
