@@ -8,7 +8,7 @@ A portable SPDX License ID matcher.
 
 - **Hybrid strategy**:
   - **Tier 1**: Broad recall using SQLite FTS5 with trigram tokenization.
-  - **Tier 2**: Precision ranking using RapidFuzz (token set ratio).
+  - **Tier 2**: Precision ranking using RapidFuzz (token set ratio) + Popularity weighting.
   - **Tier 3**: Optional final validation via `tools-java` if available.
 - **Unix philosophy**: Parseable CLI output.
 
@@ -44,10 +44,16 @@ Match text from a file:
 licenseid match LICENSE.txt
 ```
 
-Or from a string:
+Match with Java validation enabled:
 
 ```bash
-licenseid match --text "This is a sample license text..."
+licenseid match LICENSE.txt --java
+```
+
+Match without popularity weighting:
+
+```bash
+licenseid match LICENSE.txt --no-pop
 ```
 
 ### 3. Output formats

@@ -70,10 +70,16 @@ def update(db: Optional[str], version: str) -> None:
 @click.option("--threshold", type=float, default=0.85, help="Minimum score threshold.")
 @click.option("--top", type=int, default=3, help="Maximum number of results to return.")
 @click.option(
-    "--consult-tools-java",
-    "consult_tools_java",
-    is_flag=True,
-    help="Enable Tier 3 Java validation (requires tools-java).",
+    "--java/--no-java",
+    "enable_java",
+    default=False,
+    help="Enable/disable Tier 3 Java validation (requires tools-java).",
+)
+@click.option(
+    "--pop/--no-pop",
+    "enable_popularity",
+    default=True,
+    help="Enable/disable popularity score weighting.",
 )
 def match(
     input_file: Optional[str],
@@ -82,7 +88,8 @@ def match(
     json_output: bool,
     threshold: float,
     top: int,
-    consult_tools_java: bool,
+    enable_java: bool,
+    enable_popularity: bool,
 ) -> None:
     """Identify license text and return the closest matched SPDX License ID."""
     db_path = db or get_default_db_path()
@@ -114,7 +121,9 @@ def match(
             )
             sys.exit(1)
 
-    matcher = AggregatedLicenseMatcher(db_path, enable_java=consult_tools_java)
+    matcher = AggregatedLicenseMatcher(
+        db_path, enable_java=enable_java, enable_popularity=enable_popularity
+    )
     results = matcher.match(license_text)
 
     # Filter by threshold and limit to top N

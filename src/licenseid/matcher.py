@@ -14,9 +14,12 @@ from licenseid.normalize import normalize_text
 
 
 class AggregatedLicenseMatcher:
-    def __init__(self, db_path: str, enable_java: bool = False):
+    def __init__(
+        self, db_path: str, enable_java: bool = False, enable_popularity: bool = True
+    ):
         self.db = LicenseDatabase(db_path)
         self.enable_java = enable_java
+        self.enable_popularity = enable_popularity
         self.jar_path = os.getenv("SPDX_TOOLS_JAR")
         self.has_java = shutil.which("java") is not None
 
@@ -33,6 +36,7 @@ class AggregatedLicenseMatcher:
         exclude_list = data.get("exclude", [])
         hint_list = data.get("hint", [])
         enable_java = data.get("enable_java", self.enable_java)
+        enable_popularity = data.get("enable_popularity", self.enable_popularity)
 
         # Tier 0: Minimum Threshold Check & Short-Text Fallback
         norm_input = normalize_text(text)
@@ -92,11 +96,14 @@ class AggregatedLicenseMatcher:
             # Token Set Ratio is good for reordered paragraphs and minor noise
             base_score = fuzz.token_set_ratio(norm_input, search_text) / 100.0
 
-            # Apply popularity boost: final_score = score + (log10(pop) * 0.005)
-            # This helps break ties (like Apache-2.0 vs Pixar)
-            pop_score = cand.get("popularity_score", 1)
-            boost = math.log10(max(1, pop_score)) * 0.005
-            final_score = base_score + boost
+            # Apply popularity boost if enabled: final_score = score + (log10(pop) * 0.005)
+            # This helps break ties between similar licenses.
+            if enable_popularity:
+                pop_score = cand.get("popularity_score", 1)
+                boost = math.log10(max(1, pop_score)) * 0.005
+                final_score = base_score + boost
+            else:
+                final_score = base_score
 
             ranked.append({"license_id": cand["license_id"], "score": final_score})
 
