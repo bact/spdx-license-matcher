@@ -11,6 +11,47 @@ TOTAL_POPULAR = 100
 TOTAL_CONFUSING = 50
 TOTAL_RARE = 50
 
+MUST_HAVE_LICNESES = (
+    "MIT",
+    "Apache-2.0",
+    "BSD-3-Clause",
+    "BSD-2-Clause",
+    "GPL-2.0-only",
+    "GPL-3.0-or-later",
+    "GPL-2.0-or-later",
+    "0BSD",
+    "PostgreSQL",
+    "MS-PL",
+    "Zlib",
+    "ISC",
+    "AFL-3.0",
+    "MPL-2.0",
+    "CDDL-1.0",
+    "OpenSSL",
+    "MPL-2.0",
+    "CC0-1.0",
+    "CC-BY-4.0",
+    "X11",
+)
+
+POPULAR_PREFIXES = (
+    "W3C",
+    "CPL-1.0",
+    "MIT",
+    "GPL",
+    "AGPL",
+    "LGPL",
+    "Apache",
+    "BSD",
+    "CC-",
+    "EPL",
+    "EUPL-",
+    "GFDL-",
+    "OFL-",
+    "OLDAP-",
+    "Unlicense",
+)
+
 FOREIGN_TEXTS = [
     "Esta licencia aplica a este software.",
     "Ce logiciel est sous licence libre.",
@@ -35,79 +76,6 @@ def fetch_license_text(license_id):
     if resp.status_code == 200:
         return resp.text
     return None
-
-
-def select_licenses(licenses):
-    popular = []
-    confusing = []
-    rare = []
-
-    # Simple heuristics for popular
-    popular_prefixes = (
-        "GPL",
-        "AGPL",
-        "LGPL",
-        "Apache",
-        "MIT",
-        "BSD",
-        "CC-",
-        "MPL",
-        "EPL",
-        "CDDL-",
-        "EUPL-",
-        "OpenSSL",
-        "GFDL-",
-        "OFL-",
-        "OLDAP-",
-        "Unlicense",
-        "W3C",
-        "X11",
-        "Zlib",
-        "OFL-",
-        "AFL-3.0",
-        "PostgreSQL",
-        "MS-PL",
-        "ISC",
-        "0BSD",
-        "CPL-1.0",
-    )
-
-    for lic in licenses:
-        lid = lic["licenseId"]
-        if (
-            any(lid.startswith(p) for p in popular_prefixes)
-            or lic.get("isOsiApproved")
-            or lic.get("isFsfLibre")
-        ):
-            if len(popular) < TOTAL_POPULAR:
-                popular.append(lic)
-            elif len(confusing) < TOTAL_CONFUSING and any(
-                lid.startswith(p) for p in popular_prefixes
-            ):
-                # E.g., GPL-2.0-only vs GPL-2.0-or-later
-                confusing.append(lic)
-            else:
-                rare.append(lic)
-        else:
-            rare.append(lic)
-
-    # Shuffle and slice
-    random.shuffle(popular)
-    popular = popular[:TOTAL_POPULAR]
-
-    random.shuffle(confusing)
-    confusing = confusing[:TOTAL_CONFUSING]
-
-    random.shuffle(rare)
-    rare = rare[:TOTAL_RARE]
-
-    # If not enough, borrow from rare
-    while len(popular) < TOTAL_POPULAR and rare:
-        popular.append(rare.pop())
-    while len(confusing) < TOTAL_CONFUSING and rare:
-        confusing.append(rare.pop())
-
-    return popular + confusing + rare
 
 
 def find_close_ids(target_id, all_licenses):
@@ -206,27 +174,20 @@ def main():
     confusing = []
     rare = []
 
-    popular_prefixes = (
-        "GPL",
-        "AGPL",
-        "LGPL",
-        "Apache",
-        "MIT",
-        "BSD",
-        "CC-",
-        "MPL",
-        "EPL",
-    )
-
     # Categorize all available first
+    must_have = []
     for lic in all_licenses:
         lid = lic["licenseId"]
+        if lid in MUST_HAVE_LICNESES:
+            must_have.append(lic)
+            continue
+
         if (
-            any(lid.startswith(p) for p in popular_prefixes)
+            any(lid.startswith(p) for p in POPULAR_PREFIXES)
             or lic.get("isOsiApproved")
             or lic.get("isFsfLibre")
         ):
-            if any(lid.startswith(p) for p in popular_prefixes):
+            if any(lid.startswith(p) for p in POPULAR_PREFIXES):
                 if random.random() > 0.5:
                     popular.append(lic)
                 else:
@@ -239,6 +200,9 @@ def main():
     random.shuffle(popular)
     random.shuffle(confusing)
     random.shuffle(rare)
+
+    # Ensure must-have are at the front of popular pool
+    popular = must_have + popular
 
     pools = {
         "popular": {"pool": popular, "target": TOTAL_POPULAR, "count": 0},

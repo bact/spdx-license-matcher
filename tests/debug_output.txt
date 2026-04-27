@@ -1,0 +1,44 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.18, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/arthit/projects/spdx-license-matcher
+configfile: pyproject.toml
+plugins: cov-7.1.0
+collected 1 item
+
+tests/test_accuracy.py 
+Populating test database with 555 fixtures...
+FAILED Top 1 (00%): True=BSD-3-Clause, Got=BSD-2-Clause
+FAILED Top 1 (01%): True=BSD-3-Clause, Got=BSD-2-Clause
+FAILED Top 1 (00%): True=GPL-3.0-or-later, Got=LGPL-3.0-only
+FAILED Top 1 (00%): True=GPL-2.0-only, Got=GPL-2.0-or-later
+FAILED Top 1 (01%): True=GPL-2.0-only, Got=GPL-2.0-or-later
+Subset Top 1 Accuracy (00%): 83.33% (18 licenses)
+Subset Top 5 Accuracy (00%): 100.00%
+F
+
+=================================== FAILURES ===================================
+_____________________________ test_subset_accuracy _____________________________
+
+matcher = <licenseid.matcher.AggregatedLicenseMatcher object at 0x1072e96c0>
+
+    def test_subset_accuracy(matcher):
+        """Standard quick test: use the must-have licenses, verbatim and 1% distortion."""
+        rates = ["00", "01"]
+        results = run_accuracy_test(matcher, rates, license_ids=MUST_HAVE_LICENSES)
+    
+        for rate in rates:
+            stats = results[rate]
+            if stats["total"] > 0:
+                top1_acc = (stats["top1"] / stats["total"]) * 100
+                top5_acc = (stats["top5"] / stats["total"]) * 100
+                print(f"Subset Top 1 Accuracy ({rate}%): {top1_acc:.2f}% ({stats['total']} licenses)")
+                print(f"Subset Top 5 Accuracy ({rate}%): {top5_acc:.2f}%")
+    
+                # Must be very high for Top 1 on these core licenses
+>               assert top1_acc >= 90
+E               assert 83.33333333333334 >= 90
+
+tests/test_accuracy.py:150: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_accuracy.py::test_subset_accuracy - assert 83.3333333333333...
+============================== 1 failed in 1.26s ===============================
