@@ -4,9 +4,10 @@
 
 import os
 import shutil
-import subprocess
-import tempfile
 from typing import Any, Dict, List, Union
+
+import jpype
+import jpype.imports
 
 from rapidfuzz import fuzz
 
@@ -93,52 +94,48 @@ class AggregatedLicenseMatcher:
 
         return ranked
 
+    def _ensure_jvm(self) -> None:
+        """Ensure the JVM is started with the tools-java JAR."""
+        if not jpype.isJVMStarted():
+            # Start JVM with daemon thread support and string conversion disabled
+            jpype.startJVM(classpath=[self.jar_path], convertStrings=False)
+            # Initialize SPDX Model Factory once
+            SpdxModelFactory = jpype.JClass("org.spdx.library.SpdxModelFactory")
+            SpdxModelFactory.init()
+
     def _consult_java(
         self, text: str, ranked: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
         """
-        Consult the tools-java MatchingStandardLicenses command for top candidates.
+        Consult the tools-java MatchingStandardLicenses logic via JPype.
         """
-        # Create a temporary file for the license text
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as tmp:
-            tmp.write(text)
-            tmp_path = tmp.name
+        self._ensure_jvm()
 
+        # Reliable thread attach/detach pattern
+        JThread = jpype.JClass("java.lang.Thread")
+        JThread.attachAsDaemon()
         try:
-            # Run the MatchingStandardLicenses command
-            # java -cp <jar> org.spdx.tools.Main MatchingStandardLicenses <file>
-            cmd = [
-                "java",
-                "-cp",
-                self.jar_path,
-                "org.spdx.tools.Main",
-                "MatchingStandardLicenses",
-                tmp_path,
-            ]
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            LicenseCompareHelper = jpype.JClass(
+                "org.spdx.utility.compare.LicenseCompareHelper"
+            )
 
-            if result.returncode == 0:
-                # Parse the output to find matched license IDs
-                java_matches = set()
-                for line in result.stdout.splitlines():
-                    # Check if any candidate ID is mentioned in the output
-                    for r in ranked:
-                        if r["license_id"] in line:
-                            java_matches.add(r["license_id"])
+            # matchingStandardLicenseIdsWithinText returns a java.util.List<String>
+            java_matches_list = (
+                LicenseCompareHelper.matchingStandardLicenseIdsWithinText(text)
+            )
+            # convertStrings=False requires manual conversion
+            java_matches = {str(m) for m in java_matches_list}
 
-                # Boost scores for Java-verified matches
-                for r in ranked:
-                    if r["license_id"] in java_matches:
-                        r["score"] = 1.0  # Perfect match if Java verifies
-                        r["java_verified"] = True
-
-        except subprocess.TimeoutExpired:
-            pass
+            # Boost scores for Java-verified matches
+            for r in ranked:
+                if r["license_id"] in java_matches:
+                    r["score"] = 1.0  # Perfect match if Java verifies
+                    r["java_verified"] = True
         except Exception:
+            # Handle or log exception
             pass
         finally:
-            if os.path.exists(tmp_path):
-                os.remove(tmp_path)
+            JThread.detach()
 
         # Re-sort matches by boosted score
         ranked.sort(key=lambda x: x["score"], reverse=True)
