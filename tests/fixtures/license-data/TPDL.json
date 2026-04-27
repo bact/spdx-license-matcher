@@ -1,0 +1,14 @@
+{
+    "license_text": "Copyright (C) 1996-2010 David Muir Sharnoff. Copyright (C) 2011 Google, Inc. \nLicense hereby granted for anyone to use, modify or redistribute this module at their own risk. Please feed useful changes back to cpan@dave.sharnoff.org.\n",
+    "license_id": "TPDL",
+    "close_license_ids": [],
+    "is_high_usage": false,
+    "is_osi_approved": false,
+    "is_fsf_libre": false,
+    "is_spdx": true,
+    "license_text_distorted_01": "Copyright (C) 1996-2010 David Muir Sharnoff. Copyright (C) 2011 Google, Inc. License hereby granted for anyone to use, modify or redistribute this module at their own risk. Please feed useful changes back to cpan@dave.sharnoff.org.",
+    "license_text_distorted_05": "Copyright (C) 1996-2010 David Muir Sharnoff. Copyright (C) 2011 Google, License hereby granted for anyone to use, modify or redistribute this module at their own risk. Please feed useful changes back to cpan@dave.sharnoff.org.",
+    "license_text_distorted_10": "Copyright (C) 1996-2010 David Muir Sharnoff. Copyright (C) 2011 Google, Inc. License hereby granted for anyone Questo software \u00e8 fornito cos\u00ec com'\u00e8. to use, Diese Lizenz gilt f\u00fcr diese Software. modify or \u3053\u306e\u30bd\u30d5\u30c8\u30a6\u30a7\u30a2\u306f\u30aa\u30fc\u30d7\u30f3\u30bd\u30fc\u30b9\u3067\u3059\u3002 redistribute this module at their own risk. Please feed useful changes back to cpan@dave.sharnoff.org.",
+    "license_text_distorted_20": "Cpoyrgiht \u3053\u306e\u30bd\u30d5\u30c8\u30a6\u30a7\u30a2\u306f\u30aa\u30fc\u30d7\u30f3\u30bd\u30fc\u30b9\u3067\u3059\u3002 (C) 1996-2010 David Muir Sharnoff. Copyright (C) 2011 Google, Inc. Diese Lizenz gilt f\u00fcr diese Software. License hereby granted for to use, modify or redistribute this module at their own risk. Please feed useful changes back to cpan@dave.sharnoff.org.",
+    "license_text_distorted_40": "Copyright (C) 1996-2010 David Muir \u3053\u306e\u30bd\u30d5\u30c8\u30a6\u30a7\u30a2\u306f\u30aa\u30fc\u30d7\u30f3\u30bd\u30fc\u30b9\u3067\u3059\u3002 Sharnoff. Copyright 2011 Google, Inc License hereby fro anyone to use, modify or redistribute this \u3053\u306e\u30bd\u30d5\u30c8\u30a6\u30a7\u30a2\u306f\u30aa\u30fc\u30d7\u30f3\u30bd\u30fc\u30b9\u3067\u3059\u3002 module at their own \n risk. Please feed useful changes \n back to"
+}
