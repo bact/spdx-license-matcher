@@ -78,7 +78,7 @@ def test_short_text_rejection(tmp_path):
     import sqlite3
 
     LicenseDatabase(db_path)
-    
+
     with sqlite3.connect(db_path) as conn:
         conn.execute(
             "INSERT INTO licenses (license_id, name, is_spdx, is_osi_approved) VALUES (?, ?, ?, ?)",
@@ -98,7 +98,7 @@ def test_short_text_rejection(tmp_path):
     assert matcher.match("This") == []
     assert matcher.match("Copyright 2024.") == []
     assert matcher.match("One two three four") == []
-    
+
     # Exact name matches (< 12 words)
     res_mit = matcher.match("MIT")
     assert len(res_mit) > 0 and res_mit[0]["license_id"] == "MIT"

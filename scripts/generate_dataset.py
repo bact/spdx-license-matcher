@@ -63,6 +63,13 @@ def select_licenses(licenses):
         "W3C",
         "X11",
         "Zlib",
+        "OFL-",
+        "AFL-3.0",
+        "PostgreSQL",
+        "MS-PL",
+        "ISC",
+        "0BSD",
+        "CPL-1.0",
     )
 
     for lic in licenses:

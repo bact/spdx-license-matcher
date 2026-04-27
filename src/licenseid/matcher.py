@@ -36,7 +36,7 @@ class AggregatedLicenseMatcher:
         # Tier 0: Minimum Threshold Check & Short-Text Fallback
         norm_input = normalize_text(text)
         words = norm_input.split()
-        
+
         # Evidence-based threshold: The shortest full license (any-OSI) is 12 words.
         # Anything shorter is treated as a title, snippet, or ID and uses the fallback logic.
         if len(words) < 12:
@@ -168,34 +168,36 @@ class AggregatedLicenseMatcher:
         """
         # Very short inputs (e.g. < 5 chars and 1 word) should be exact/prefix match, or just rejected
         # if they are generic like "this". But fuzzy match takes care of that if threshold is high.
-        
+
         all_metadata = self.db.get_all_names_and_ids()
         ranked = []
-        
+
         # Determine strictness threshold:
         # If the input is extremely short (1 word), require a very high similarity.
         # Otherwise, 85% similarity is a reasonable baseline for names.
         words = norm_input.split()
         threshold = 90.0 if len(words) <= 2 else 85.0
-        
+
         for meta in all_metadata:
             lid = meta["license_id"]
             name = meta["name"]
-            
+
             # Compare against ID
             id_norm = normalize_text(lid)
             score_id = fuzz.ratio(norm_input, id_norm)
-            score_id_partial = fuzz.partial_ratio(norm_input, id_norm) if len(words) == 1 else 0
-            
+            score_id_partial = (
+                fuzz.partial_ratio(norm_input, id_norm) if len(words) == 1 else 0
+            )
+
             # Compare against Name
             name_norm = normalize_text(name)
             # Use Token Set Ratio for names because titles might be permuted e.g. "GNU AFFERO" vs "GNU Affero General Public License"
             score_name = fuzz.token_set_ratio(norm_input, name_norm)
-            
+
             best_score = max(score_id, score_name, score_id_partial)
-            
+
             if best_score >= threshold:
                 ranked.append({"license_id": lid, "score": best_score / 100.0})
-                
+
         ranked.sort(key=lambda x: x["score"], reverse=True)
         return ranked

@@ -3,6 +3,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import sqlite3
+import tarfile
+import tempfile
+import json
+from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 import requests
 import xml.etree.ElementTree as ET
@@ -40,80 +45,124 @@ class LicenseDatabase:
                     tokenize = 'trigram'
                 )
             """)
+            # Metadata table for version tracking
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS db_metadata (
+                    key TEXT PRIMARY KEY,
+                    value TEXT
+                )
+            """)
 
-    def update_from_remote(self) -> None:
+    def update_from_remote(self, version: str = "3.28.0") -> None:
         """
-        Fetch license data from SPDX and AboutCode and update the local database.
+        Fetch license data from SPDX release package and update the local database.
         """
-        print("Updating license database from remote sources...")
+        print(f"Updating license database to SPDX v{version}...")
 
-        # 1. Fetch SPDX License List metadata
-        metadata_url = "https://raw.githubusercontent.com/spdx/license-list-data/main/json/licenses.json"
-        print(f"Reading metadata: {metadata_url}")
-        resp = requests.get(metadata_url)
-        resp.raise_for_status()
-        licenses_data = resp.json().get("licenses", [])
+        tar_url = f"https://github.com/spdx/license-list-data/archive/refs/tags/v{version}.tar.gz"
+        print(f"Downloading release: {tar_url}")
 
-        print(f"Processing {len(licenses_data)} licenses ", end="", flush=True)
+        try:
+            resp = requests.get(tar_url, stream=True)
+            resp.raise_for_status()
 
-        with sqlite3.connect(self.db_path) as conn:
-            conn.execute("DELETE FROM license_index")
-            conn.execute("DELETE FROM licenses")
+            with tempfile.TemporaryDirectory() as tmp_dir:
+                tar_path = Path(tmp_dir) / "data.tar.gz"
+                with open(tar_path, "wb") as f:
+                    for chunk in resp.iter_content(chunk_size=8192):
+                        f.write(chunk)
 
-            for i, lic in enumerate(licenses_data):
-                license_id = lic["licenseId"]
-                license_name = lic.get("name", "")
-                try:
-                    # Fetch raw license text
-                    text_url = f"https://raw.githubusercontent.com/spdx/license-list-data/main/text/{license_id}.txt"
-                    text_resp = requests.get(text_url)
-                    if text_resp.status_code != 200:
-                        continue
+                with tarfile.open(tar_path, "r:gz") as tar:
+                    tar.extractall(path=tmp_dir)
 
-                    raw_text = text_resp.text
+                # Find the extracted root directory
+                root_dir = next(Path(tmp_dir).iterdir())
 
-                    # Also try to fetch XML for template info
-                    xml_url = f"https://raw.githubusercontent.com/spdx/license-list-XML/main/src/{license_id}.xml"
-                    xml_resp = requests.get(xml_url)
-                    xml_content = xml_resp.text if xml_resp.status_code == 200 else None
+                licenses_json_path = root_dir / "json" / "licenses.json"
+                with open(licenses_json_path, "r") as f:
+                    data = json.load(f)
 
-                    # Create search fingerprint
-                    fingerprint = self._create_fingerprint(raw_text, xml_content)
+                licenses_data = data.get("licenses", [])
+                list_version = data.get("licenseListVersion")
+                release_date = data.get("releaseDate")
 
-                    conn.execute(
-                        """
-                        INSERT INTO licenses (
-                            license_id, name, xml_template, is_spdx, is_osi_approved, is_fsf_libre
-                        ) VALUES (?, ?, ?, ?, ?, ?)
-                    """,
-                        (
-                            license_id,
-                            license_name,
-                            xml_content,
-                            True,
-                            lic.get("isOsiApproved", False),
-                            lic.get("isFsfLibre", False),
-                        ),
+                print(
+                    f"Processing {len(licenses_data)} licenses (Version: {list_version}, Released: {release_date})"
+                )
+
+                with sqlite3.connect(self.db_path) as conn:
+                    conn.execute("DELETE FROM license_index")
+                    conn.execute("DELETE FROM licenses")
+                    conn.execute("DELETE FROM db_metadata")
+
+                    # Update metadata
+                    now = datetime.now().isoformat()
+                    metadata = [
+                        ("license_list_version", list_version),
+                        ("release_date", release_date),
+                        ("last_check_datetime", now),
+                        ("last_update_datetime", now),
+                    ]
+                    conn.executemany(
+                        "INSERT INTO db_metadata (key, value) VALUES (?, ?)", metadata
                     )
 
-                    conn.execute(
-                        """
-                        INSERT INTO license_index (license_id, search_text)
-                        VALUES (?, ?)
-                    """,
-                        (license_id, fingerprint),
-                    )
+                    for i, lic in enumerate(licenses_data):
+                        license_id = lic["licenseId"]
+                        license_name = lic.get("name", "")
 
-                    # Progress dot
-                    print(".", end="", flush=True)
-                    if (i + 1) % 50 == 0:
-                        print(f" {i + 1}")
-                        print(" ", end="", flush=True)
+                        # Read text
+                        text_path = root_dir / "text" / f"{license_id}.txt"
+                        if not text_path.exists():
+                            continue
 
-                except Exception as e:
-                    print(f"\nFailed to fetch data for {license_id}: {e}")
+                        with open(text_path, "r", encoding="utf-8") as f:
+                            raw_text = f.read()
 
-        print("\nUpdate complete.")
+                        # Read XML
+                        xml_path = root_dir / "license-list-XML" / f"{license_id}.xml"
+                        xml_content = None
+                        if xml_path.exists():
+                            with open(xml_path, "r", encoding="utf-8") as f:
+                                xml_content = f.read()
+
+                        # Create search fingerprint
+                        fingerprint = self._create_fingerprint(raw_text, xml_content)
+
+                        conn.execute(
+                            """
+                            INSERT INTO licenses (
+                                license_id, name, xml_template, is_spdx, is_osi_approved, is_fsf_libre
+                            ) VALUES (?, ?, ?, ?, ?, ?)
+                        """,
+                            (
+                                license_id,
+                                license_name,
+                                xml_content,
+                                True,
+                                lic.get("isOsiApproved", False),
+                                lic.get("isFsfLibre", False),
+                            ),
+                        )
+
+                        conn.execute(
+                            """
+                            INSERT INTO license_index (license_id, search_text)
+                            VALUES (?, ?)
+                        """,
+                            (license_id, fingerprint),
+                        )
+
+                        # Progress reporting
+                        if (i + 1) % 50 == 0 or (i + 1) == len(licenses_data):
+                            print(".", end="", flush=True)
+                        if (i + 1) % 500 == 0:
+                            print(f" {i + 1}")
+
+            print("\nUpdate complete.")
+
+        except Exception as e:
+            print(f"\nFailed to update database: {e}")
 
     def _create_fingerprint(self, text: str, xml_content: Optional[str] = None) -> str:
         """Create a search fingerprint by removing optional blocks and normalizing."""
@@ -172,4 +221,13 @@ class LicenseDatabase:
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.execute("SELECT license_id, name FROM licenses")
-            return [{"license_id": row["license_id"], "name": row["name"]} for row in cursor.fetchall()]
+            return [
+                {"license_id": row["license_id"], "name": row["name"]}
+                for row in cursor.fetchall()
+            ]
+
+    def get_metadata(self) -> Dict[str, str]:
+        """Get database metadata."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.execute("SELECT key, value FROM db_metadata")
+            return {row[0]: row[1] for row in cursor.fetchall()}

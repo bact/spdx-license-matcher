@@ -5,6 +5,7 @@
 import json
 import os
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -22,6 +23,24 @@ def get_default_db_path() -> str:
     return str(db_dir / "licenses.db")
 
 
+def check_db_staleness(database: LicenseDatabase) -> None:
+    """Check if the database is older than 6 months and warn the user."""
+    metadata = database.get_metadata()
+    last_check = metadata.get("last_check_datetime")
+    if last_check:
+        try:
+            last_check_dt = datetime.fromisoformat(last_check)
+            days_old = (datetime.now() - last_check_dt).days
+            if days_old > 182:  # Approx 6 months
+                click.echo(
+                    f"WARNING: License database is {days_old} days old. "
+                    "Run 'licenseid update' to get the latest license list.",
+                    err=True,
+                )
+        except ValueError:
+            pass
+
+
 @click.group()
 def cli() -> None:
     """SPDX License ID matcher tool."""
@@ -30,11 +49,14 @@ def cli() -> None:
 
 @cli.command()
 @click.option("--db", help="Path to the license database.")
-def update(db: Optional[str]) -> None:
+@click.option(
+    "--version", default="3.28.0", help="SPDX License List version to download."
+)
+def update(db: Optional[str], version: str) -> None:
     """Update the license database from remote sources."""
     db_path = db or get_default_db_path()
     database = LicenseDatabase(db_path)
-    database.update_from_remote()
+    database.update_from_remote(version=version)
     click.echo(f"Database updated at {db_path}")
 
 
@@ -69,6 +91,9 @@ def match(
             err=True,
         )
         sys.exit(1)
+
+    db_obj = LicenseDatabase(db_path)
+    check_db_staleness(db_obj)
 
     license_text = ""
     if input_file:
