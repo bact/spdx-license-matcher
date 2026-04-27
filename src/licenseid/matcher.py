@@ -95,17 +95,26 @@ class AggregatedLicenseMatcher:
 
             # Token Set Ratio is good for reordered paragraphs and minor noise
             base_score = fuzz.token_set_ratio(norm_input, search_text) / 100.0
+            ranked.append(
+                {
+                    "license_id": cand["license_id"],
+                    "base_score": base_score,
+                    "pop_score": cand.get("popularity_score", 1),
+                }
+            )
 
-            # Apply popularity boost if enabled: final_score = score + (log10(pop) * 0.005)
-            # This helps break ties between similar licenses.
-            if enable_popularity:
-                pop_score = cand.get("popularity_score", 1)
-                boost = math.log10(max(1, pop_score)) * 0.005
-                final_score = base_score + boost
-            else:
-                final_score = base_score
-
-            ranked.append({"license_id": cand["license_id"], "score": final_score})
+        # Popularity tie-breaker: only applies within a narrow band (0.005) of the
+        # top textual score so that large textual gaps are never overridden.
+        # Candidates outside this band keep their base score unchanged.
+        if ranked:
+            top_base = max(r["base_score"] for r in ranked)
+            tie_threshold = 0.005
+            for r in ranked:
+                if enable_popularity and (top_base - r["base_score"]) <= tie_threshold:
+                    boost = math.log10(max(1, r["pop_score"])) * 0.005
+                    r["score"] = r["base_score"] + boost
+                else:
+                    r["score"] = r["base_score"]
 
         ranked.sort(key=lambda x: x["score"], reverse=True)
 
