@@ -46,17 +46,19 @@ class LicenseDatabase:
         print("Updating license database from remote sources...")
 
         # 1. Fetch SPDX License List metadata
-        resp = requests.get(
-            "https://raw.githubusercontent.com/spdx/license-list-data/main/json/licenses.json"
-        )
+        metadata_url = "https://raw.githubusercontent.com/spdx/license-list-data/main/json/licenses.json"
+        print(f"Reading metadata: {metadata_url}")
+        resp = requests.get(metadata_url)
         resp.raise_for_status()
         licenses_data = resp.json().get("licenses", [])
+
+        print(f"Processing {len(licenses_data)} licenses ", end="", flush=True)
 
         with sqlite3.connect(self.db_path) as conn:
             conn.execute("DELETE FROM license_index")
             conn.execute("DELETE FROM licenses")
 
-            for lic in licenses_data:
+            for i, lic in enumerate(licenses_data):
                 license_id = lic["licenseId"]
                 try:
                     # Fetch raw license text
@@ -72,8 +74,7 @@ class LicenseDatabase:
                     xml_resp = requests.get(xml_url)
                     xml_content = xml_resp.text if xml_resp.status_code == 200 else None
 
-                    # Create search fingerprint: strip common noise and normalize
-                    # In a full implementation, we'd use XML to strip <optional> blocks
+                    # Create search fingerprint
                     fingerprint = self._create_fingerprint(raw_text, xml_content)
 
                     conn.execute(
@@ -98,8 +99,17 @@ class LicenseDatabase:
                     """,
                         (license_id, fingerprint),
                     )
+
+                    # Progress dot
+                    print(".", end="", flush=True)
+                    if (i + 1) % 50 == 0:
+                        print(f" {i + 1}")
+                        print(" ", end="", flush=True)
+
                 except Exception as e:
-                    print(f"Failed to fetch data for {license_id}: {e}")
+                    print(f"\nFailed to fetch data for {license_id}: {e}")
+
+        print("\nUpdate complete.")
 
     def _create_fingerprint(self, text: str, xml_content: Optional[str] = None) -> str:
         """Create a search fingerprint by removing optional blocks and normalizing."""
