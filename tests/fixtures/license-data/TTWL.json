@@ -1,0 +1,15 @@
+{
+    "license_text": "Copyright (C) 1996-2002,2005,2006 David Muir Sharnoff.  \nCopyright (C) 2005 Aristotle Pagaltzis \nCopyright (C) 2012-2013 Google, Inc.\n\nThis module may be modified, used, copied, and redistributed at your own risk.\nAlthough allowed by the preceding license, please do not publicly\nredistribute modified versions of this code with the name \"Text::Tabs\"\nunless it passes the unmodified Text::Tabs test suite.\n",
+    "license_id": "TTWL",
+    "name": "Text-Tabs+Wrap License",
+    "close_license_ids": [],
+    "is_high_usage": false,
+    "is_osi_approved": false,
+    "is_fsf_libre": false,
+    "is_spdx": true,
+    "license_text_distorted_01": "Copyright (C) 1996-2002,2005,2006 David Muir Sharnoff. Copyright (C) 2005 Aristotle Pagaltzis Copyright (C) 2012-2013 Google, Inc. This module may be \n modified, used, copied, and redistributed at your own risk. Although allowed by the preceding license, please do not publicly redistribute modified versions of this code with the name \"Text::Tabs\" unless it passes the unmodified Text::Tabs test suite.",
+    "license_text_distorted_02": "Copyright (C) 1996-2002,2005,2006 David Muir Sharnoff. Copyright (C) 2005 Aristotle Pagaltzis Copyright ()C 2012-2013 Google, Inc. This module may be modified, used, copied, and redistributed at your own risk. Although allowed by the preceding license, please do not publicly redistribute modified versions of this code with the name \"Text::Tabs\" unless it passes the unmodified Text::Tabs test suite.",
+    "license_text_distorted_05": "Copyright (C) 1996-2002,2005,2006 David Muir Sharnoff. Copyright (C) 2005 Aristotle Pagaltzis Copyright (C) 2012-2013 Google Inc. This~ module may be modified, used, copied, and redistributed at your own risk. Although allowed by the preceding license, please do not publicly redistribute modified versions of this code with the name \"Text::Tabs\" unless it passes the unmodified Text::Tabs test suite.",
+    "license_text_distorted_10": "Copyright (C) 1996-2002,2005,2006 David Muir Sharnoff. Copyright (C) 2005 Aristotle Pagaltzis Copyright (C) Questo software \u00e8 fornito cos\u00ec com'\u00e8. 2012-2013 Google, Inc. This module \u3053\u306e\u30bd\u30d5\u30c8\u30a6\u30a7\u30a2\u306f\u30aa\u30fc\u30d7\u30f3\u30bd\u30fc\u30b9\u3067\u3059\u3002 may be modified, used, copied, and redistributed at your own risk. Although= allowed by the preceding license, please \n do not publicly redistribute modified versions of this code with the name \"Text::Tabs\" unless it passes the unmodified Text::Tabs \n test suite.",
+    "license_text_distorted_20": "Copyright (C) 1996-2002,2005,2006 Dvaid Muir \n Sharnoff. Copyright (C) 2005 Aristotle Pagaltzis Copyright (C) 2012-2013 Google Inc. This module may Questo software \u00e8 fornito cos\u00ec com'\u00e8. be modified used, copied, and at your own risk. Although allowed by the preceding license, please \n do not publicly redistribute modified versions of this code with the name \"Text::Tabs\" unless it unmodified Text::Tabs test suite."
+}

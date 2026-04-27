@@ -21,6 +21,7 @@ class LicenseDatabase:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS licenses (
                     license_id TEXT PRIMARY KEY,
+                    name TEXT,
                     xml_template TEXT,
                     legacy_template TEXT,
                     ignorable_metadata TEXT,
@@ -30,6 +31,7 @@ class LicenseDatabase:
                     is_high_usage BOOLEAN
                 )
             """)
+
             # Create FTS5 virtual table for trigram search
             conn.execute("""
                 CREATE VIRTUAL TABLE IF NOT EXISTS license_index USING fts5(
@@ -60,6 +62,7 @@ class LicenseDatabase:
 
             for i, lic in enumerate(licenses_data):
                 license_id = lic["licenseId"]
+                license_name = lic.get("name", "")
                 try:
                     # Fetch raw license text
                     text_url = f"https://raw.githubusercontent.com/spdx/license-list-data/main/text/{license_id}.txt"
@@ -80,11 +83,12 @@ class LicenseDatabase:
                     conn.execute(
                         """
                         INSERT INTO licenses (
-                            license_id, xml_template, is_spdx, is_osi_approved, is_fsf_libre
-                        ) VALUES (?, ?, ?, ?, ?)
+                            license_id, name, xml_template, is_spdx, is_osi_approved, is_fsf_libre
+                        ) VALUES (?, ?, ?, ?, ?, ?)
                     """,
                         (
                             license_id,
+                            license_name,
                             xml_content,
                             True,
                             lic.get("isOsiApproved", False),
@@ -162,3 +166,10 @@ class LicenseDatabase:
                 "SELECT * FROM licenses WHERE license_id = ?", (license_id,)
             ).fetchone()
             return dict(row) if row else None
+
+    def get_all_names_and_ids(self) -> List[Dict[str, str]]:
+        """Retrieve all license IDs and names for short-text matching."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute("SELECT license_id, name FROM licenses")
+            return [{"license_id": row["license_id"], "name": row["name"]} for row in cursor.fetchall()]

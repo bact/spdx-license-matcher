@@ -69,3 +69,40 @@ def test_hybrid_search_flow(tmp_path):
     # If java verified it, it will have the flag
     if results_with_java[0].get("java_verified"):
         assert results_with_java[0]["score"] == 1.0
+
+
+def test_short_text_rejection(tmp_path):
+    """Verify that inputs with fewer than 12 normalized words use fallback logic."""
+    db_path = str(tmp_path / "test.db")
+    from licenseid.database import LicenseDatabase
+    import sqlite3
+
+    LicenseDatabase(db_path)
+    
+    with sqlite3.connect(db_path) as conn:
+        conn.execute(
+            "INSERT INTO licenses (license_id, name, is_spdx, is_osi_approved) VALUES (?, ?, ?, ?)",
+            ("MIT", "MIT License", True, True),
+        )
+        conn.execute(
+            "INSERT INTO licenses (license_id, name, is_spdx, is_osi_approved) VALUES (?, ?, ?, ?)",
+            ("APSL-2.0", "Apple Public Source License 2.0", True, True),
+        )
+
+    matcher = AggregatedLicenseMatcher(db_path)
+
+    # Empty string
+    assert matcher.match("") == []
+
+    # Generic short string (should fail name matching because threshold is 90/85)
+    assert matcher.match("This") == []
+    assert matcher.match("Copyright 2024.") == []
+    assert matcher.match("One two three four") == []
+    
+    # Exact name matches (< 12 words)
+    res_mit = matcher.match("MIT")
+    assert len(res_mit) > 0 and res_mit[0]["license_id"] == "MIT"
+
+    # Partial name matches (< 12 words)
+    res_apple = matcher.match("APPLE PUBLIC SOURCE LICENSE")
+    assert len(res_apple) > 0 and res_apple[0]["license_id"] == "APSL-2.0"

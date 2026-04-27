@@ -33,6 +33,15 @@ class AggregatedLicenseMatcher:
         hint_list = data.get("hint", [])
         enable_java = data.get("enable_java", self.enable_java)
 
+        # Tier 0: Minimum Threshold Check & Short-Text Fallback
+        norm_input = normalize_text(text)
+        words = norm_input.split()
+        
+        # Evidence-based threshold: The shortest full license (any-OSI) is 12 words.
+        # Anything shorter is treated as a title, snippet, or ID and uses the fallback logic.
+        if len(words) < 12:
+            return self._match_short_text(norm_input)
+
         # Tier 1: Broad Recall (SQLite Trigram)
         candidates = self.db.search_candidates(text)
 
@@ -67,7 +76,6 @@ class AggregatedLicenseMatcher:
 
         # Tier 2: Precision Ranking (RapidFuzz Token Set Ratio)
         # We compare the input text with the search_text (normalized fingerprint)
-        norm_input = normalize_text(text)
         ranked = []
         for cand in filtered_candidates:
             # If search_text is empty (e.g. from hint), try to fetch it
@@ -150,5 +158,44 @@ class AggregatedLicenseMatcher:
             JThread.detach()
 
         # Re-sort matches by boosted score
+        ranked.sort(key=lambda x: x["score"], reverse=True)
+        return ranked
+
+    def _match_short_text(self, norm_input: str) -> List[Dict[str, Any]]:
+        """
+        Fallback logic for very short inputs (< 12 words) that are likely names, titles, or IDs.
+        Matches against the license ID and official name rather than the full text to avoid false positives.
+        """
+        # Very short inputs (e.g. < 5 chars and 1 word) should be exact/prefix match, or just rejected
+        # if they are generic like "this". But fuzzy match takes care of that if threshold is high.
+        
+        all_metadata = self.db.get_all_names_and_ids()
+        ranked = []
+        
+        # Determine strictness threshold:
+        # If the input is extremely short (1 word), require a very high similarity.
+        # Otherwise, 85% similarity is a reasonable baseline for names.
+        words = norm_input.split()
+        threshold = 90.0 if len(words) <= 2 else 85.0
+        
+        for meta in all_metadata:
+            lid = meta["license_id"]
+            name = meta["name"]
+            
+            # Compare against ID
+            id_norm = normalize_text(lid)
+            score_id = fuzz.ratio(norm_input, id_norm)
+            score_id_partial = fuzz.partial_ratio(norm_input, id_norm) if len(words) == 1 else 0
+            
+            # Compare against Name
+            name_norm = normalize_text(name)
+            # Use Token Set Ratio for names because titles might be permuted e.g. "GNU AFFERO" vs "GNU Affero General Public License"
+            score_name = fuzz.token_set_ratio(norm_input, name_norm)
+            
+            best_score = max(score_id, score_name, score_id_partial)
+            
+            if best_score >= threshold:
+                ranked.append({"license_id": lid, "score": best_score / 100.0})
+                
         ranked.sort(key=lambda x: x["score"], reverse=True)
         return ranked

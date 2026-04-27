@@ -33,10 +33,11 @@ def matcher(tmp_path_factory):
 
             # Insert into licenses table
             conn.execute(
-                "INSERT INTO licenses (license_id, is_spdx, is_osi_approved, is_fsf_libre, is_high_usage) "
-                "VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO licenses (license_id, name, is_spdx, is_osi_approved, is_fsf_libre, is_high_usage) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
                 (
                     data["license_id"],
+                    data.get("name", ""),
                     data.get("is_spdx", True),
                     data.get("is_osi_approved", False),
                     data.get("is_fsf_libre", False),

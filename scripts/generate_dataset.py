@@ -269,6 +269,7 @@ def main():
         data = {
             "license_text": text,
             "license_id": lid,
+            "name": lic.get("name", ""),
             "close_license_ids": find_close_ids(lid, all_licenses),
             "is_high_usage": lic.get("isOsiApproved", False)
             or lic.get("isFsfLibre", False),
