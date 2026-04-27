@@ -6,7 +6,7 @@ A modern, portable SPDX License ID matcher.
 
 ## Features
 
-- **Embedded Search**: Uses SQLite FTS5 with trigram tokenization for fast recall. No Redis required.
+- **Embedded Search**: Uses SQLite FTS5 with trigram tokenization for fast recall.
 - **Hybrid Strategy**:
   - **Tier 1**: Broad recall using SQLite.
   - **Tier 2**: Precision ranking using RapidFuzz (Token Set Ratio).
@@ -16,8 +16,10 @@ A modern, portable SPDX License ID matcher.
 
 ## Installation
 
+Install with `pipx`:
+
 ```bash
-pip install licenseid
+pipx install licenseid
 ```
 
 Or using `uv`:
@@ -29,6 +31,7 @@ uv tool install licenseid
 ## Usage
 
 ### 1. Update the License Database
+
 Before matching, you need to build the local license index:
 
 ```bash
@@ -36,6 +39,7 @@ licenseid update
 ```
 
 ### 2. Match a License
+
 Match text from a file:
 
 ```bash
@@ -49,12 +53,15 @@ licenseid match --text "This is a sample license text..."
 ```
 
 ### 3. Output Formats
+
 Default (Unix-friendly):
-```
-LICENSEID=Apache-2.0 SCORE=0.9850
+
+```text
+LICENSE_ID=Apache-2.0 SCORE=0.9850
 ```
 
 JSON:
+
 ```bash
 licenseid match LICENSE.txt --json
 ```

@@ -9,7 +9,7 @@ from bs4 import BeautifulSoup
 def normalize_text(text: str) -> str:
     """
     Normalises license text based on SPDX Matching Guidelines.
-    
+
     1. HTML to plain text (if detected).
     2. Whitespace: All whitespace is treated as a single blank space.
     3. Case: All letters are treated as lowercase.
@@ -27,11 +27,9 @@ def normalize_text(text: str) -> str:
     # 3. Case sensitivity
     text = text.lower()
 
-    # 4. Punctuation Equivalence
-    # Hyphens, dashes
-    text = re.sub(r"[\u2010\u2011\u2012\u2013\u2014\u2015-]", "-", text)
-    # Quotes
-    text = re.sub(r"[\u2018\u2019\u201A\u201B\u201C\u201D\u201E\u201F'\"]", '"', text)
+    # 4. Punctuation (Ignored)
+    # Replace all punctuation characters with a space
+    text = re.sub(r"[^\w\s]", " ", text)
 
     # 5. Whitespace and Pagination
     # Replace any sequence of whitespace characters (including line breaks) with a single space
@@ -46,7 +44,6 @@ def strip_list_markers(text: str) -> str:
     """
     # This is a bit more complex as it usually applies to lines/paragraphs.
     # For now, a simple regex for common markers.
-    lines = text.split(" ")
     # This might be better handled in a more structured way per paragraph.
     # But for a single normalized string, we can try to remove common patterns.
     # However, SPDX Matching Guidelines say list markers are ignored.

@@ -42,20 +42,32 @@ def update(db: Optional[str]) -> None:
 @click.argument("input_file", type=click.Path(exists=True), required=False)
 @click.option("--text", help="License text to match.")
 @click.option("--db", help="Path to the license database.")
-@click.option("--json", "json_output", is_flag=True, help="Output results in JSON format.")
+@click.option(
+    "--json", "json_output", is_flag=True, help="Output results in JSON format."
+)
 @click.option("--threshold", type=float, default=0.0, help="Minimum score threshold.")
+@click.option(
+    "--consult-tools-java",
+    "consult_tools_java",
+    is_flag=True,
+    help="Enable Tier 3 Java validation (requires tools-java).",
+)
 def match(
     input_file: Optional[str],
     text: Optional[str],
     db: Optional[str],
     json_output: bool,
-    threshold: float
+    threshold: float,
+    consult_tools_java: bool,
 ) -> None:
     """Identify license text and return the closest matched SPDX License ID."""
     db_path = db or get_default_db_path()
-    
+
     if not os.path.exists(db_path):
-        click.echo(f"Error: Database not found at {db_path}. Please run 'licenseid update' first.", err=True)
+        click.echo(
+            f"Error: Database not found at {db_path}. Please run 'licenseid update' first.",
+            err=True,
+        )
         sys.exit(1)
 
     license_text = ""
@@ -69,10 +81,13 @@ def match(
         if not sys.stdin.isatty():
             license_text = sys.stdin.read()
         else:
-            click.echo("Error: No input text provided. Provide a file, --text, or pipe to stdin.", err=True)
+            click.echo(
+                "Error: No input text provided. Provide a file, --text, or pipe to stdin.",
+                err=True,
+            )
             sys.exit(1)
 
-    matcher = AggregatedLicenseMatcher(db_path)
+    matcher = AggregatedLicenseMatcher(db_path, enable_java=consult_tools_java)
     results = matcher.match(license_text)
 
     # Filter by threshold
@@ -84,10 +99,10 @@ def match(
         if not results:
             click.echo("ERROR: No matching license found.", err=True)
             sys.exit(1)
-        
+
         # Standard output: line-delimited, KEY=VALUE
         for r in results:
-            click.echo(f"LICENSEID={r['licenseId']} SCORE={r['score']:.4f}")
+            click.echo(f"LICENSE_ID={r['license_id']} SCORE={r['score']:.4f}")
 
 
 def main() -> None:

@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import pytest
 
+
 @pytest.fixture(scope="session", autouse=True)
 def setup_spdx_tools_jar():
     """Sets the SPDX_TOOLS_JAR environment variable to the bundled test jar."""
