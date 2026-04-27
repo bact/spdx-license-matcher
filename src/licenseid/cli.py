@@ -68,9 +68,7 @@ def update(db: Optional[str], version: str) -> None:
     "--json", "json_output", is_flag=True, help="Output results in JSON format."
 )
 @click.option("--threshold", type=float, default=0.85, help="Minimum score threshold.")
-@click.option(
-    "--top", type=int, default=3, help="Maximum number of results to return."
-)
+@click.option("--top", type=int, default=3, help="Maximum number of results to return.")
 @click.option(
     "--consult-tools-java",
     "consult_tools_java",

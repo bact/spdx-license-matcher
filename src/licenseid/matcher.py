@@ -2,6 +2,7 @@
 # SPDX-FileType: SOURCE
 # SPDX-License-Identifier: Apache-2.0
 
+import math
 import os
 import shutil
 from typing import Any, Dict, List, Union
@@ -63,6 +64,7 @@ class AggregatedLicenseMatcher:
                 if not (details.get("is_osi_approved") or details.get("is_fsf_libre")):
                     continue
 
+            cand["popularity_score"] = details.get("popularity_score", 1)
             filtered_candidates.append(cand)
 
         # Force-include hints
@@ -72,7 +74,13 @@ class AggregatedLicenseMatcher:
                 details = self.db.get_license_details(h_id)
                 if details:
                     # Append hinted license for precision ranking
-                    filtered_candidates.append({"license_id": h_id, "search_text": ""})
+                    filtered_candidates.append(
+                        {
+                            "license_id": h_id,
+                            "search_text": "",
+                            "popularity_score": details.get("popularity_score", 1),
+                        }
+                    )
 
         # Tier 2: Precision Ranking (RapidFuzz Token Set Ratio)
         # We compare the input text with the search_text (normalized fingerprint)
@@ -82,8 +90,15 @@ class AggregatedLicenseMatcher:
             search_text = cand.get("search_text") or ""
 
             # Token Set Ratio is good for reordered paragraphs and minor noise
-            score = fuzz.token_set_ratio(norm_input, search_text) / 100.0
-            ranked.append({"license_id": cand["license_id"], "score": score})
+            base_score = fuzz.token_set_ratio(norm_input, search_text) / 100.0
+
+            # Apply popularity boost: final_score = score + (log10(pop) * 0.005)
+            # This helps break ties (like Apache-2.0 vs Pixar)
+            pop_score = cand.get("popularity_score", 1)
+            boost = math.log10(max(1, pop_score)) * 0.005
+            final_score = base_score + boost
+
+            ranked.append({"license_id": cand["license_id"], "score": final_score})
 
         ranked.sort(key=lambda x: x["score"], reverse=True)
 

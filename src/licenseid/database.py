@@ -33,7 +33,8 @@ class LicenseDatabase:
                     is_spdx BOOLEAN,
                     is_osi_approved BOOLEAN,
                     is_fsf_libre BOOLEAN,
-                    is_high_usage BOOLEAN
+                    is_high_usage BOOLEAN,
+                    popularity_score INTEGER DEFAULT 1
                 )
             """)
 
@@ -58,6 +59,9 @@ class LicenseDatabase:
         Fetch license data from SPDX release package and update the local database.
         """
         print(f"Updating license database to SPDX v{version}...")
+
+        # 1. Fetch Popularity Data from GitHub Innovation Graph
+        popularity_map = self._fetch_popularity_data()
 
         tar_url = f"https://github.com/spdx/license-list-data/archive/refs/tags/v{version}.tar.gz"
         print(f"Downloading release: {tar_url}")
@@ -129,11 +133,24 @@ class LicenseDatabase:
                         # Create search fingerprint
                         fingerprint = self._create_fingerprint(raw_text, xml_content)
 
+                        # Determine popularity score
+                        baseline = (
+                            100
+                            if (
+                                lic.get("isOsiApproved", False)
+                                or lic.get("isFsfLibre", False)
+                            )
+                            else 1
+                        )
+                        pop_count = popularity_map.get(license_id, 0)
+                        popularity_score = max(baseline, pop_count)
+
                         conn.execute(
                             """
                             INSERT INTO licenses (
-                                license_id, name, xml_template, is_spdx, is_osi_approved, is_fsf_libre
-                            ) VALUES (?, ?, ?, ?, ?, ?)
+                                license_id, name, xml_template, is_spdx, 
+                                is_osi_approved, is_fsf_libre, popularity_score
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?)
                         """,
                             (
                                 license_id,
@@ -142,6 +159,7 @@ class LicenseDatabase:
                                 True,
                                 lic.get("isOsiApproved", False),
                                 lic.get("isFsfLibre", False),
+                                popularity_score,
                             ),
                         )
 
@@ -163,6 +181,40 @@ class LicenseDatabase:
 
         except Exception as e:
             print(f"\nFailed to update database: {e}")
+
+    def _fetch_popularity_data(self) -> Dict[str, int]:
+        """Fetch and aggregate popularity data from GitHub Innovation Graph."""
+        url = "https://raw.githubusercontent.com/github/innovationgraph/main/data/licenses.csv"
+        print(f"Downloading popularity data: {url}")
+
+        popularity_map: Dict[str, int] = {}
+        try:
+            resp = requests.get(url)
+            resp.raise_for_status()
+
+            import csv
+            import io
+
+            content = io.StringIO(resp.text)
+            reader = csv.DictReader(content)
+
+            for row in reader:
+                spdx_id = row.get("spdx_license")
+                if not spdx_id or spdx_id == "NOASSERTION":
+                    continue
+
+                try:
+                    count = int(row.get("num_pushers", 0))
+                except ValueError:
+                    count = 0
+
+                popularity_map[spdx_id] = popularity_map.get(spdx_id, 0) + count
+
+            print(f"Aggregated popularity data for {len(popularity_map)} licenses.")
+        except Exception as e:
+            print(f"Warning: Failed to fetch popularity data: {e}")
+
+        return popularity_map
 
     def _create_fingerprint(self, text: str, xml_content: Optional[str] = None) -> str:
         """Create a search fingerprint by removing optional blocks and normalizing."""
