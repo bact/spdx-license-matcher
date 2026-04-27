@@ -1,11 +1,12 @@
 import json
 import random
+import string
 import requests
 import re
 from pathlib import Path
 
 FIXTURES_DIR = Path("tests/fixtures/license-data")
-DISTORTION_RATES = [1, 5, 10, 20, 40]
+DISTORTION_RATES = [1, 2, 5, 10, 20]
 TOTAL_POPULAR = 100
 TOTAL_CONFUSING = 50
 TOTAL_RARE = 50
@@ -52,6 +53,16 @@ def select_licenses(licenses):
         "CC-",
         "MPL",
         "EPL",
+        "CDDL-",
+        "EUPL-",
+        "OpenSSL",
+        "GFDL-",
+        "OFL-",
+        "OLDAP-",
+        "Unlicense",
+        "W3C",
+        "X11",
+        "Zlib",
     )
 
     for lic in licenses:
@@ -96,9 +107,9 @@ def find_close_ids(target_id, all_licenses):
     # A simple stem match. E.g., GPL-2.0 is close to GPL-2.0-only
     stem = target_id.split("-")[0]
     close = [
-        l["licenseId"]
-        for l in all_licenses
-        if l["licenseId"] != target_id and l["licenseId"].startswith(stem)
+        lic["licenseId"]
+        for lic in all_licenses
+        if lic["licenseId"] != target_id and lic["licenseId"].startswith(stem)
     ]
     # limit to 5
     return close[:5]
@@ -138,6 +149,17 @@ def distort_text(text, rate_percent):
                     i = random.randint(0, len(w) - 2)
                     w[i], w[i + 1] = w[i + 1], w[i]
                     words[idx] = "".join(w)
+            elif word_op < 0.8:
+                # Insert random punctuation
+                punct = random.choice(string.punctuation)
+                words[idx] += punct
+            elif word_op < 0.9:
+                # Break word with space or hyphen
+                w = words[idx]
+                if len(w) > 3:
+                    split_idx = random.randint(1, len(w) - 1)
+                    char = random.choice([" ", "-"])
+                    words[idx] = w[:split_idx] + char + w[split_idx:]
             else:
                 # Remove punctuation
                 words[idx] = re.sub(r"[^\w\s]", "", words[idx])

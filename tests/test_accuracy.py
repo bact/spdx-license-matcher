@@ -14,7 +14,7 @@ def matcher(tmp_path_factory):
 
     from licenseid.database import LicenseDatabase
 
-    db = LicenseDatabase(db_path)  # Initialize schema
+    LicenseDatabase(db_path)  # Initialize schema
 
     # Populate the database with our fixtures
     fixtures = list(FIXTURES_DIR.glob("*.json"))
@@ -107,15 +107,15 @@ def test_subset_accuracy(matcher):
         if stats["total"] > 0:
             accuracy = (stats["correct"] / stats["total"]) * 100
             print(f"Subset Accuracy ({rate}%): {accuracy:.2f}%")
-            # We don't assert a strict threshold because it depends on random sampling,
-            # but we ensure the test completes without error and we log the accuracy.
-            assert accuracy >= 0
+            # Can't be 100% because it depends on random sampling,
+            # but with 1% distortion, it reasonable to aim high.
+            assert accuracy >= 90
 
 
 @pytest.mark.benchmark
 def test_full_accuracy(matcher):
     """Full benchmark test: all 200 licenses across all distortion rates."""
-    rates = ["00", "01", "05", "10", "20", "40"]
+    rates = ["00", "01", "02", "05", "10", "20"]
     results = run_accuracy_test(matcher, rates)
 
     print("\n" + "=" * 50)
