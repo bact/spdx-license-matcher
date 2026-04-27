@@ -6,9 +6,6 @@ import os
 import shutil
 from typing import Any, Dict, List, Union
 
-import jpype
-import jpype.imports
-
 from rapidfuzz import fuzz
 
 from licenseid.database import LicenseDatabase
@@ -96,6 +93,14 @@ class AggregatedLicenseMatcher:
 
     def _ensure_jvm(self) -> None:
         """Ensure the JVM is started with the tools-java JAR."""
+        try:
+            import jpype
+        except ImportError:
+            raise ImportError(
+                "JPype1 is required for Java validation. "
+                "Install it with 'pip install licenseid[java]'"
+            )
+
         if not jpype.isJVMStarted():
             # Start JVM with daemon thread support and string conversion disabled
             jpype.startJVM(classpath=[self.jar_path], convertStrings=False)
@@ -109,6 +114,13 @@ class AggregatedLicenseMatcher:
         """
         Consult the tools-java MatchingStandardLicenses logic via JPype.
         """
+        try:
+            import jpype
+        except ImportError:
+            # If enable_java was True but JPype is missing, we already checked in match()
+            # but being safe here too.
+            return ranked
+
         self._ensure_jvm()
 
         # Reliable thread attach/detach pattern
