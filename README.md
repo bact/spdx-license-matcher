@@ -50,11 +50,14 @@ Match with Java validation enabled:
 licenseid match LICENSE.txt --java
 ```
 
-Match without popularity weighting:
+Match with popularity tie-breaker enabled:
 
 ```bash
-licenseid match LICENSE.txt --no-pop
+licenseid match LICENSE.txt --pop
 ```
+
+The tie-breaker is triggered only when candidate similarity scores
+differ by less than 0.02%.
 
 ### 3. Output formats
 

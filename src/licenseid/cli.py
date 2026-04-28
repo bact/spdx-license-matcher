@@ -78,7 +78,7 @@ def update(db: Optional[str], version: str) -> None:
 @click.option(
     "--pop/--no-pop",
     "enable_popularity",
-    default=True,
+    default=False,
     help="Enable/disable popularity score weighting.",
 )
 def match(

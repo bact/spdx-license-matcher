@@ -15,7 +15,7 @@ from licenseid.normalize import normalize_text
 
 class AggregatedLicenseMatcher:
     def __init__(
-        self, db_path: str, enable_java: bool = False, enable_popularity: bool = True
+        self, db_path: str, enable_java: bool = False, enable_popularity: bool = False
     ):
         self.db = LicenseDatabase(db_path)
         self.enable_java = enable_java
