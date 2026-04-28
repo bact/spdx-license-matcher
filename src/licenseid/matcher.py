@@ -103,12 +103,12 @@ class AggregatedLicenseMatcher:
                 }
             )
 
-        # Popularity tie-breaker: only applies within a narrow band (0.005) of the
+        # Popularity tie-breaker: only applies within a narrow band (0.2%) of the
         # top textual score so that large textual gaps are never overridden.
         # Candidates outside this band keep their base score unchanged.
         if ranked:
             top_base = max(r["base_score"] for r in ranked)
-            tie_threshold = 0.005
+            tie_threshold = 0.002  # Diff between Apache-2.0 and Pixar is 0.0018
             for r in ranked:
                 if enable_popularity and (top_base - r["base_score"]) <= tie_threshold:
                     boost = math.log10(max(1, r["pop_score"])) * 0.005

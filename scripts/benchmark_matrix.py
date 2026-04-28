@@ -83,7 +83,7 @@ def run_matrix():
 
     print("\n" + "=" * 80)
     print(
-        f"{'Configuration':<25} | {'0% Noise':<15} | {'1% Noise':<15} | {'2% Noise':<15}"
+        f"{'Configuration':<25} | {'0% Noise':<13} | {'1% Noise':<13} | {'2% Noise':<13} |"
     )
     print("-" * 80)
 
